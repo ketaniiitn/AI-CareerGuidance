@@ -11,7 +11,7 @@ interface ChatMessagesProps {
   messages: Message[]
   isLoading: boolean
 }
-// dvjds
+
 export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 

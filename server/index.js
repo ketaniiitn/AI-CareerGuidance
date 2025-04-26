@@ -6,7 +6,13 @@ const app = express();
 
 
 // CORS setup
-app.use(cors());
+app.use(cors(
+   { origin:'http://localhost:3000', // Allow requests from this origin
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
+    allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
+    credentials: true,
+    } // Allow credentials (cookies, authorization headers, etc.)}
+));
 
 app.use(express.json()); // handles JSON
 app.use(express.urlencoded({ extended: true })); // handles URL-encoded data

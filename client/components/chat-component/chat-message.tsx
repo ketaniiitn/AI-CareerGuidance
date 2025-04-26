@@ -4,6 +4,7 @@ import { Bot, User2 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import ReactMarkdown from "react-markdown" // Import ReactMarkdown
 import type { Message } from "./chat-layout"
 
 interface ChatMessageProps {
@@ -32,7 +33,17 @@ export function ChatMessage({ message }: ChatMessageProps) {
           message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
         )}
       >
-        <div className="whitespace-pre-wrap">{message.content}</div>
+        {/* Render the content as Markdown */}
+        <div
+          className={cn(
+            "markdown-content",
+            message.role === "user" ? "text-primary-foreground" : "text-foreground"
+          )}
+        >
+          <ReactMarkdown>
+            {message.content}
+          </ReactMarkdown>
+        </div>
         <div
           className={cn(
             "text-xs mt-1",
