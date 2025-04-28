@@ -80,33 +80,31 @@ server/
 ## 🗃️ Database Schema (Prisma)
 
 ```prisma
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  chats     Chat[]
+model Conversation {
+  id              String             @id @default(uuid())
+  userId          String             
+  createdAt       DateTime           @default(now())
+  history         ConversationHistory[]
 }
 
-model Chat {
-  id        Int       @id @default(autoincrement())
-  userId    Int
-  title     String
-  messages  Message[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  user      User      @relation(fields: [userId], references: [id])
+model ConversationHistory {
+  id            String     @id @default(uuid())
+  question      String
+  answer        String
+  context         String
+  followUpQuestion String
+  references       String
+  conversationId String     
+  createdAt     DateTime   @default(now())
+  conversation  Conversation @relation(fields: [conversationId], references: [id])
 }
 
-model Message {
-  id        Int      @id @default(autoincrement())
-  chatId    Int
-  sender    String   // 'user' or 'bot'
-  content   Json     // { answer: String, reference: String, followup: [String] }
-  createdAt DateTime @default(now())
-
-  chat      Chat     @relation(fields: [chatId], references: [id])
+model Document {
+  id        Int     @id @default(autoincrement())
+  content   String  
+  embedding Bytes   
 }
+
 ```
 
 ---
