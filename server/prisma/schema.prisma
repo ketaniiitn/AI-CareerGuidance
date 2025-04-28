@@ -1,13 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// This is your Prisma schema file
 
 generator client {
   provider = "prisma-client-js"
-  // output   = "../generated/prisma"
-  //  output   = "../node_modules/@prisma/client"
 }
 
 datasource db {
@@ -15,9 +9,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Conversation {
+  id              String             @id @default(uuid())
+  userId          String             
+  createdAt       DateTime           @default(now())
+  history         ConversationHistory[]
+}
+
+model ConversationHistory {
+  id            String     @id @default(uuid())
+  question      String
+  answer        String
+  context         String
+  followUpQuestion String
+  references       String
+  conversationId String     
+  createdAt     DateTime   @default(now())
+  conversation  Conversation @relation(fields: [conversationId], references: [id])
+}
 
 model Document {
   id        Int     @id @default(autoincrement())
-  content   String
-  embedding Bytes
+  content   String  
+  embedding Bytes   
 }

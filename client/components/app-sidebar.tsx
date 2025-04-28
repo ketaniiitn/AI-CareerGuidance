@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { usePathname } from "next/navigation"
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import {
   BookOpen,
   BriefcaseBusiness,
@@ -12,7 +12,7 @@ import {
   PanelLeft,
   Settings,
   User2,
-} from "lucide-react"
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,16 +25,57 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-} from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+} from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useUser } from "@clerk/nextjs";
+
+interface Chat {
+  id: number;
+  title: string;
+}
 
 export function AppSidebar() {
-  const pathname = usePathname()
-  const [searchQuery, setSearchQuery] = useState("")
+  const pathname = usePathname();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [recentChats, setRecentChats] = useState<Chat[]>([]);
+  const { user, isLoaded, isSignedIn } = useUser();
+  // Fetch chats from API
+  useEffect(() => {
+    async function fetchChats() {
+      try {
+        const response = await fetch("http://localhost:5000/file/conversationsh", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ uid: user?.id  })
 
-  // Navigation items
+        });
+  
+        const data = await response.json();
+        console.log("Fetched chats:", data); // Check here
+  
+        if (Array.isArray(data.data)) {
+          // Map only ids into { id, title: "Conversation {id}" }
+          const chats = data.data.map((id: number) => ({
+            id,
+            title: `Conversation ${id}`,
+          }));
+          setRecentChats(chats);
+        } else {
+          console.error("Unexpected response format:", data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch chats:", error);
+      }
+    }
+    fetchChats();
+  }, []);
+  
+  
+
   const mainNavItems = [
     {
       title: "Home",
@@ -54,7 +95,7 @@ export function AppSidebar() {
       href: "/learning-paths",
       isActive: pathname === "/learning-paths",
     },
-  ]
+  ];
 
   const resourcesItems = [
     {
@@ -69,7 +110,7 @@ export function AppSidebar() {
       href: "/ideas",
       isActive: pathname === "/ideas",
     },
-  ]
+  ];
 
   return (
     <Sidebar variant="sidebar" collapsible="icon">
@@ -133,30 +174,21 @@ export function AppSidebar() {
           <SidebarGroupLabel>Recent Chats</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Career Planning">
-                  <a href="#">
-                    <MessageSquare />
-                    <span>Career Planning</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Resume Review">
-                  <a href="#">
-                    <MessageSquare />
-                    <span>Resume Review</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Interview Prep">
-                  <a href="#">
-                    <MessageSquare />
-                    <span>Interview Prep</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {recentChats.length === 0 ? (
+                <div className="text-xs text-muted-foreground p-2">No recent chats</div>
+              ) : (
+                recentChats.map((chat) => (
+                  <SidebarMenuItem key={chat.id}>
+                    <SidebarMenuButton asChild tooltip={chat.title}>
+                    <a href={`/chat/${chat.id}`}>
+  <MessageSquare />
+  <span>{chat.title}</span>
+</a>
+
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -183,5 +215,5 @@ export function AppSidebar() {
         </div>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

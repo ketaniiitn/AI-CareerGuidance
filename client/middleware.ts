@@ -14,7 +14,7 @@ export default clerkMiddleware(async (getAuth, req: NextRequest) => {
   }
 
   const { userId } = await getAuth();
-
+  
   if (!userId) {
     const signInUrl = new URL('/sign-in', req.url);
     return NextResponse.redirect(signInUrl);

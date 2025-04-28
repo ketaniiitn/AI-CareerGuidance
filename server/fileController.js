@@ -17,12 +17,12 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const vectorToBytes = (vector) => Buffer.from(new Float32Array(vector).buffer);
 const bytesToVector = (bytes) => Array.from(new Float32Array(bytes));
 
-/**
- * 1. Create Embedding from a PDF
- */
+
+// 1. Create Embedding from a PDF
+
 const createEmbeddingFromPDF = async (req, res) => {
   try {
-    const filePath = path.join(__dirname, "./pdfs", "ProfessionalCareersafter12th.pdf");
+    const filePath = path.join(__dirname, "./pdfs", "CareerData .pdf");
     console.log(filePath);
 
     if (!fs.existsSync(filePath)) {
@@ -52,12 +52,15 @@ const createEmbeddingFromPDF = async (req, res) => {
 
     await Promise.all(createPromises);
 
-    res.json({ message: "Embeddings created and saved successfully" });
+    res.json({ message: "Embeddings created and saved successfully ", filePath });
   } catch (error) {
     console.error("Error creating embedding:", error);
     res.status(500).json({ error: "Error creating embedding" });
   }
 };
+
+
+//2. Create Embedding from a CSV
 
 const createEmbeddingFromCSV = async (req, res) => {
   try {
@@ -98,6 +101,9 @@ const createEmbeddingFromCSV = async (req, res) => {
   }
 };
 
+/**
+ * 3. Helper: Read CSV file
+ */
 function readCSV(filePath) {
   return new Promise((resolve, reject) => {
     const results = [];
@@ -109,204 +115,235 @@ function readCSV(filePath) {
   });
 }
 
+
 const query = async (req, res) => {
-    try {
-      const { question } = req.body;
-      if (!question) {
-        return res.status(400).json({ error: "Question is required" });
-      }
-  
-      const [queryEmbedding] = await embeddingModel.embedDocuments([question]);
-  
-      const documents = await prisma.document.findMany();
-  
-      if (documents.length === 0) {
-        return res.status(404).json({ error: "No documents found" });
-      }
-  
-      const scoredDocs = documents.map((doc) => {
-        const docEmbedding = bytesToVector(doc.embedding);
-        const score = cosineSimilarity(queryEmbedding, docEmbedding);
-        return { ...doc, score };
-      });
-  
-      const topDocuments = scoredDocs
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 3);
-  
-      const context = topDocuments.map((doc) => doc.content).join("\n---\n");
-  
-      // ✅ Adding references
-      const references = topDocuments.map((doc, index) => `Reference ${index + 1}: "${doc.content.slice(0, 200)}..."`).join("\n");
-  
-      // 💬 Inject your custom SYSTEM PROMPT here
-      const systemPrompt = `
-  You are a professional career counselor specialized in guiding students towards the best possible career paths based on provided information.
-  Please format the response using bullet points, headings (e.g., ## for subsections), and bold text where appropriate.
-  Your tasks:
-  - Identify suitable career paths, education opportunities, and relevant skills based strictly on the provided context.
-  - If a student mentions a career interest (e.g., "computer science", "law", "fashion design"), suggest:
-    - Top universities (mentioned in the dataset) offering related courses
-    - Important entrance exams or certifications required
-    - Major job roles, career growth paths, and industries
-    - Skills needed to succeed
-    - Possible alternate career paths if applicable
-  - Prioritize providing practical, achievable advice based on the dataset.
-  - Do not invent universities, exams, or opportunities outside the context provided.
-  - Maintain a positive, realistic, and motivational tone. Be specific rather than vague.
-  - If the required information is missing from the context, say: "I'm sorry, based on the provided information, I don't have sufficient details to answer that."
-  
-  Goal: Act as a supportive, knowledgeable career mentor who helps students make confident, well-informed decisions about their future.
-  `;
-  
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", temperature: 0.8 });
-  
-      const result = await model.generateContent({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: `
-  ${systemPrompt}
-  
-  Context:
-  ${context}
-  
-  Question: ${question}
-                `.trim()
-              }
-            ]
-          }
-        ]
-      });
-  
-      const response = result.response;
-      const text = response.text();
-  
-      // ✅ Modified response to include references also
-      res.json({ 
-        answer: text.trim(),
-        references: references
-      });
-  
-    } catch (error) {
-      console.error("Error processing query:", error);
-      res.status(500).json({ error: "Error processing query" });
+  try {
+    const { question, conversationId, isFollowUp ,id} = req.body;
+    console.log("Received question:", question);
+    console.log("Received conversationId:", conversationId);
+    console.log("Is follow-up:", isFollowUp);
+    console.log("Received id:", id);
+
+    if (!question) {
+      return res.status(400).json({ error: "Question is required" });
     }
-  };
-  
-/**
- * 2. Query on stored embeddings
- */
-// const query = async (req, res) => {
-//   try {
-//     const { question } = req.body;
-//     if (!question) {
-//       return res.status(400).json({ error: "Question is required" });
-//     }
 
-//     const [queryEmbedding] = await embeddingModel.embedDocuments([question]);
+    let currentConversation = null;
+    let context = "";
+    let referencesArray = [];
+    let followUpQuestion = "";
+    let previousContext = "";
 
-//     const documents = await prisma.document.findMany();
+    // If this is a follow-up question, retrieve the conversation
+    if (isFollowUp && id&&id!="career-guidance-home") {
+      currentConversation = await prisma.conversation.findUnique({
+        where: { id: id },
+        include: { history: true }, // Include history
+      });
 
-//     if (documents.length === 0) {
-//       return res.status(404).json({ error: "No documents found" });
-//     }
+      if (!currentConversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
 
-//     const scoredDocs = documents.map((doc) => {
-//       const docEmbedding = bytesToVector(doc.embedding);
-//       const score = cosineSimilarity(queryEmbedding, docEmbedding);
-//       return { ...doc, score };
-//     });
+      // Retrieve the most recent conversation history to build context
+      previousContext = currentConversation.history.length > 0 ? currentConversation.history[currentConversation.history.length - 1].context : "";
+      followUpQuestion = currentConversation.history.length > 0 ? currentConversation.history[currentConversation.history.length - 1].followUpQuestion : "";
+    }
 
-//     const topDocuments = scoredDocs
-//       .sort((a, b) => b.score - a.score)
-//       .slice(0, 3);
+    console.log("Previous context:", followUpQuestion);
+    followUpQuestion = "Follow up question: " + followUpQuestion;
+    console.log("followup"+followUpQuestion);
+    let questionToProcess = question;
+    if (isFollowUp && followUpQuestion) {
+      const [questionEmbedding] = await embeddingModel.embedDocuments([question]);
+      const [followUpEmbedding] = await embeddingModel.embedDocuments([followUpQuestion]);
 
-//     const context = topDocuments.map((doc) => doc.content).join("\n---\n");
+      const similarity = cosineSimilarity(questionEmbedding, followUpEmbedding);
+      console.log("Similarity between question and follow-up:", similarity);
 
-//     // 💬 Inject your custom SYSTEM PROMPT here
-//     const systemPrompt = `
-// You are a professional career counselor specialized in guiding students towards the best possible career paths based on provided information.
-// Please format the response using bullet points, headings (e.g., ## for subsections), and bold text where appropriate.
-// Your tasks:
-// - Identify suitable career paths, education opportunities, and relevant skills based strictly on the provided context.
-// - If a student mentions a career interest (e.g., "computer science", "law", "fashion design"), suggest:
-//   - Top universities (mentioned in the dataset) offering related courses
-//   - Important entrance exams or certifications required
-//   - Major job roles, career growth paths, and industries
-//   - Skills needed to succeed
-//   - Possible alternate career paths if applicable
-// - Prioritize providing practical, achievable advice based on the dataset.
-// - Do not invent universities, exams, or opportunities outside the context provided.
-// - Maintain a positive, realistic, and motivational tone. Be specific rather than vague.
-// - If the required information is missing from the context, say: "I'm sorry, based on the provided information, I don't have sufficient details to answer that."
+      const shortFollowUps = ["yes", "yeah", "yup", "continue", "tell me more", "ok", "okay", "sure", "go ahead", "please continue"];
 
-// Goal: Act as a supportive, knowledgeable career mentor who helps students make confident, well-informed decisions about their future.
-// `;
+      const normalizedQuestion = question.trim().toLowerCase();
 
-//     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" , temperature: 0.8 });
+      if (similarity > 0.7 || shortFollowUps.includes(normalizedQuestion)) {
+        console.log("Using follow-up question as main input.");
+        questionToProcess = followUpQuestion;
+      } else {
+        console.log("Using original question as input.");
+      }
+    }
 
-//     const result = await model.generateContent({
-//       contents: [
-//         {
-//           role: "user",
-//           parts: [
-//             {
-//               text: `
-// ${systemPrompt}
+    // Generate embedding for the question
+    const [queryEmbedding] = await embeddingModel.embedDocuments([questionToProcess]);
 
-// Context:
-// ${context}
+    // Retrieve documents from the database
+    const documents = await prisma.document.findMany();
 
-// Question: ${question}
-//               `.trim()
-//             }
-//           ]
-//         }
-//       ]
-//     });
+    if (documents.length === 0) {
+      return res.status(404).json({ error: "No documents found" });
+    }
 
-//     const response = result.response;
-//     const text = response.text();
+    // Calculate similarity scores
+    const scoredDocs = documents.map((doc) => {
+      const docEmbedding = bytesToVector(doc.embedding);
+      const score = cosineSimilarity(queryEmbedding, docEmbedding);
+      return { ...doc, score };
+    });
 
-//     res.json({ answer: text.trim() });
-//   } catch (error) {
-//     console.error("Error processing query:", error);
-//     res.status(500).json({ error: "Error processing query" });
-//   }
-// };
+    // Get top 3 documents
+    const topDocuments = scoredDocs
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10);
 
-/**
- * Helper: Split long text into smaller chunks
- */
-// function splitTextIntoChunks(text, maxLength) {
-//   const sentences = text.split(/(?<=[.?!])\s+/);
-//   const chunks = [];
-//   let chunk = "";
+    // Combine context from top documents and previous context (if follow-up)
+    context = topDocuments.map((doc) => doc.content).join("\n---\n");
+    if (previousContext && isFollowUp) {
+      context = `${previousContext}\n---\n${context}`;
+    }
 
-//   for (const sentence of sentences) {
-//     if ((chunk + sentence).length > maxLength) {
-//       chunks.push(chunk.trim());
-//       chunk = "";
-//     }
-//     chunk += sentence + " ";
-//   }
+    // Create references array
+    referencesArray = topDocuments.map((doc, index) => ({
+      reference_number: index + 1,
+      preview: doc.content.slice(0, 200) + "...",
+    }));
 
-//   if (chunk.trim().length > 0) {
-//     chunks.push(chunk.trim());
-//   }
+    const referencesText = referencesArray
+      .map((ref) => `Reference ${ref.reference_number}: "${ref.preview}"`)
+      .join("\n");
 
-//   return chunks;
-// }
-function splitTextIntoChunks(text) {
-    const topics = text.split(/(?=LAW|ENGINEERING|MEDICAL|BUSINESS MANAGEMENT|DESIGN|HOTEL MANAGEMENT|MASS COMMUNICATION|COMMERCE|ARTS\/HUMANITIES|PURE SCIENCE|SPORTS|PERFORMING ARTS|LIBERAL STUDIES|ECONOMICS|SOCIAL WORK)/);
-    return topics.map(chunk => chunk.trim()).filter(chunk => chunk.length > 1000);
+    const systemPrompt = `
+You are a professional career counselor specialized in guiding students toward optimal career paths based on provided information. Your responses should be clear, structured, and encouraging, using bullet points, headings, and **bold text**.
+
+Your Tasks:
+- Identify career paths, education, entrance exams, skills, based on CONTEXT only.
+- Answer the user's question properly based on context.
+- Be very positive and helpful.
+
+Rules:
+- If context is missing info, reply "I don't have sufficient information."
+- Do NOT add random data.
+- Be specific, clear, and positive.
+`;
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", temperature: 0.7 });
+
+    // Generate main answer
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `
+${systemPrompt}
+
+Context:
+${context}
+
+Question: ${questionToProcess}
+            `.trim(),
+            },
+          ],
+        },
+      ],
+    });
+
+    const response = result.response;
+    const answer = response.text().trim();
+
+    // Generate follow-up question
+    const followUpPrompt = `
+You are a smart assistant helping users to ask better career-related questions.
+
+Given these references:
+
+${referencesText}
+
+Generate a meaningful and natural follow-up question that the user might logically ask next, based on the above references and user's last question.
+
+Guidelines:
+- Only one follow-up question.
+- It should be highly related to the topics mentioned.
+- Do not create random or unrelated questions.
+- Example follow-up words: "Would you like to explore...", "Are you interested in knowing more about...", "Would you like me to suggest..."
+`;
+
+    const followUpResult = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: followUpPrompt }],
+        },
+      ],
+    });
+
+    followUpQuestion = followUpResult.response.text().trim();
+
+    // If conversation exists, update the conversation history, otherwise create a new conversation
+    if (!currentConversation) {
+      currentConversation = await prisma.conversation.create({
+        data: {
+          history: {
+            create: [
+              {
+                question,
+                answer,
+                context,
+                followUpQuestion,
+                references: JSON.stringify(referencesArray),
+              },
+            ],
+          },
+        },
+      });
+    } else {
+      // Create new conversation history for each question-answer pair
+      await prisma.conversationHistory.create({
+        data: {
+          question,
+          answer,
+          context,
+          followUpQuestion,
+          references: JSON.stringify(referencesArray),
+          conversationId: currentConversation.id,
+        },
+      });
+    }
+
+    // Send response
+    res.json({
+      success: true,
+      data: {
+        answer,
+        follow_up: followUpQuestion,
+        references: referencesArray,
+        conversationId: currentConversation.id,
+      },
+    });
+  } catch (error) {
+    console.error("Error processing query:", error);
+    res.status(500).json({ error: "Error processing query" });
   }
-  
+};
+
+
+function splitTextIntoChunks(text, maxLength = 1000) {
+  const topics = text.split(/(?=LAW|ENGINEERING|MEDICAL|BUSINESS MANAGEMENT|DESIGN|HOTEL MANAGEMENT|MASS COMMUNICATION|COMMERCE|ARTS\/HUMANITIES|PURE SCIENCE|SPORTS|PERFORMING ARTS|LIBERAL STUDIES|ECONOMICS|SOCIAL WORK)/)//); // Keep your regex
+  const chunks = [];
+  topics.forEach((topic) => {
+    let start = 0;
+    while (start < topic.length) {
+      const end = start + maxLength;
+      const chunk = topic.slice(start, end).trim();
+      if (chunk) chunks.push(chunk);
+      start = end;
+    }
+  });
+  return chunks;
+}
+
 /**
- * Helper: Cosine Similarity between two vectors
+ * 6. Helper: Cosine Similarity
  */
 function cosineSimilarity(vecA, vecB) {
   const dotProduct = vecA.reduce((sum, a, idx) => sum + a * vecB[idx], 0);
@@ -315,4 +352,145 @@ function cosineSimilarity(vecA, vecB) {
   return dotProduct / (normA * normB);
 }
 
-module.exports = { createEmbeddingFromPDF, query, createEmbeddingFromCSV };
+const fetchConversationHistory = async (req, res) => {
+  try {
+    const { conversationId } = req.params;  // Get conversationId from route params
+
+    if (!conversationId) {
+      return res.status(400).json({
+        success: false,
+        message: "Conversation ID is required",
+      });
+    }
+
+    console.log(`Fetching history for conversation ID: ${conversationId}...`);
+
+    // Fetch the conversation with the provided conversationId
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+    });
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: "Conversation not found",
+      });
+    }
+
+    // Fetch the conversation history for this specific conversation
+    const conversationHistory = await prisma.conversationHistory.findMany({
+      where: {
+        conversationId: conversationId,
+      },
+      orderBy: {
+        createdAt: "desc", // Fetch the latest messages first
+      },
+    });
+
+    if (conversationHistory.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No conversation history found for this conversation",
+      });
+    }
+
+    // Get the latest message from the conversation history (last entry)
+    const latestMessage = conversationHistory[0];
+
+    res.json({
+      success: true,
+     id: conversationHistory.id,
+    conver: conversationId,    // Return the conversation ID
+      latestMessage,        // Return the latest message in the history
+      history: conversationHistory,  // Optionally return the full history
+    });
+
+  } catch (error) {
+    console.error("Error fetching conversation history:", error);
+    res.status(500).json({ error: "Error fetching conversation history" });
+  }
+};
+
+const fetchAllConversationsh = async (req, res) => {
+  const {id} = req.body;
+  try {
+    console.log("Fetching all conversations...");
+
+    // Fetch all conversations ordered by creation time
+    const conversations = await prisma.conversation.findMany({
+      where:{
+        userId: id
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (conversations.length === 0) {
+      return res.json({
+        success: false,
+        message: "No conversations found",
+      });
+    }
+
+    // Extract all conversation IDs
+    const conversationIds = conversations.map((conversation) => conversation.id);
+
+    res.json({
+      success: true,
+      data: conversationIds, // All conversation IDs
+    });
+
+  } catch (error) {
+    console.error("Error fetching conversation IDs:", error);
+    res.status(500).json({ error: "Error fetching conversation IDs" });
+  }
+};
+
+const conversationHistory = async (req, res) => {
+  try {
+    const { id ,uid} = req.body;
+
+    // Fetch the conversation history for the given conversation ID
+    const history = await prisma.conversationHistory.findMany({
+      where: {
+        conversationId: id, // Ensure we filter by conversationId
+      },
+      orderBy: { createdAt: "asc" }, // Order by creation time
+    });
+
+    if (!history || history.length === 0) {
+      return res.status(200).json({ error: "No history found for this conversation" });
+    }
+
+    console.log("Fetched conversation history:", history.length, id);
+
+    res.json({ success: true, data: history,iddd: history.id });
+  } catch (error) {
+    console.error("Error fetching conversation history:", error);
+    res.status(500).json({ error: "Error fetching conversation history" });
+  }
+};
+
+const createConversation= async (req, res) => {
+  try {
+    const { id, uid } = req.body;
+    const createdAt = new Date();
+    // Create a new conversation
+    const newConversation = await prisma.conversation.create({
+      
+      data: {
+        id: id,
+        userId: uid,
+        createdAt: createdAt,
+        history: {
+          create: [], // Initialize with an empty history
+        },
+      },
+    });
+
+    res.status(201).json({ success: true, data: newConversation });
+  } catch (error) {
+    console.error("Error creating conversation:", error);
+    res.status(500).json({ error: "Error creating conversation" });
+  }
+};
+module.exports = { createEmbeddingFromPDF, query, createEmbeddingFromCSV ,fetchConversationHistory,fetchAllConversationsh,conversationHistory,createConversation};
