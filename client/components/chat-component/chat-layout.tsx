@@ -26,52 +26,53 @@ const initialMessages: Message[] = [
 export default function ChatLayout() {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [isLoading, setIsLoading] = useState(false);
-  const [showAllReferences, setShowAllReferences] = useState(false); // State to manage "See More" click
+  const [showAllReferences, setShowAllReferences] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(
     usePathname().split("/").pop() || null
-  ); // Track conversation ID
-  const [conversationHistoryFetched, setConversationHistoryFetched] = useState(false); // To prevent refetching history
-  // Function to fetch conversation history only once
-  const [historyId, setHistoryId] = useState<string | null>(null); // Track history ID
-  const { user, isLoaded, isSignedIn } = useUser();
-  console.log(user)
+  );
+  const [conversationHistoryFetched, setConversationHistoryFetched] = useState(false);
+  const [historyId, setHistoryId] = useState<string | null>(null);
+  const { user, isLoaded } = useUser();
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://ai-careerguidance.onrender.com";
+
   const fetchConversationHistory = async (conversationId: string) => {
-    if (conversationHistoryFetched) return; // Don't fetch again if history is already fetched
+    if (conversationHistoryFetched || !user?.id) return;
 
     try {
-      const res = await fetch("https://ai-careerguidance.onrender.com/file/conversationHistory", {
+      const res = await fetch(`${API_BASE}/file/conversationHistory`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ uid: user?.id ,id: conversationId }),
+        body: JSON.stringify({ uid: user.id, id: conversationId }),
       });
+
       if (!res.ok) {
-        setMessages([]); // Clear messages on error
+        setMessages([]);
         throw new Error("Failed to fetch conversation history");
       }
 
       const data = await res.json();
       setHistoryId(data.iddd);
+
       if (data.success && data.data) {
         const history = data.data;
-         setMessages([]); // Clear messages before setting new ones
+
         const formattedHistory: Message[] = history.map((msg: any) => ({
           id: msg.id.toString(),
-          content: msg.answer+msg.followUpQuestion, // Display the assistant's answer
-          role: "assistant", // This message is from the assistant
+          content: msg.answer + msg.followUpQuestion,
+          role: "assistant",
           timestamp: new Date(msg.createdAt),
         }));
 
-        // Add the user's question as a "user" message
         const userMessages: Message[] = history.map((msg: any) => ({
           id: msg.id.toString() + "-user",
-          content: msg.question, // Display the user's question
-          role: "user", // This message is from the user
+          content: msg.question,
+          role: "user",
           timestamp: new Date(msg.createdAt),
         }));
 
-        // Combine the user questions and assistant answers
         const combinedMessages = [];
         for (let i = 0; i < history.length; i++) {
           combinedMessages.push(userMessages[i]);
@@ -80,7 +81,8 @@ export default function ChatLayout() {
 
         setMessages(combinedMessages);
       }
-      setConversationHistoryFetched(true); // Mark history as fetched
+
+      setConversationHistoryFetched(true);
     } catch (error) {
       console.error("Error fetching conversation history:", error);
       toast.error("Failed to load conversation history.");
@@ -88,46 +90,43 @@ export default function ChatLayout() {
   };
 
   useEffect(() => {
-    if (conversationId && !conversationHistoryFetched) {
-      fetchConversationHistory(conversationId); // Fetch history only once
+    if (conversationId && !conversationHistoryFetched && isLoaded && user?.id) {
+      fetchConversationHistory(conversationId);
     }
-  }, [conversationId, conversationHistoryFetched]);
+  }, [conversationId, conversationHistoryFetched, isLoaded, user?.id]);
 
-  const formatResponse = (rawAnswer: string): string => {
-    return rawAnswer.trim(); // Answer is just displayed as it is
-  };
+  const formatResponse = (rawAnswer: string): string => rawAnswer.trim();
 
-  const formatReferences = (references: { reference_number: number, preview: string }[]): string => {
-    if (!references || references.length === 0) {
-      return '';
-    }
+  const formatReferences = (
+    references: { reference_number: number; preview: string }[]
+  ): string => {
+    if (!references || references.length === 0) return "";
 
-    const maxReferencesToShow = 3; // Number of references to show initially
-    const visibleReferences = showAllReferences ? references : references.slice(0, maxReferencesToShow);
+    const maxReferencesToShow = 3;
+    const visibleReferences = showAllReferences
+      ? references
+      : references.slice(0, maxReferencesToShow);
 
-    const formattedRefs = visibleReferences.map(ref => `• Reference ${ref.reference_number}: ${ref.preview.trim()}`);
+    const formattedRefs = visibleReferences.map(
+      (ref) => `• Reference ${ref.reference_number}: ${ref.preview.trim()}`
+    );
     const remainingCount = references.length - visibleReferences.length;
 
-    const referenceText = `**References**\n${formattedRefs.join('\n')}`;
-
-    // If there are more references to show, append a "See More" indicator
+    let referenceText = `**References**\n${formattedRefs.join("\n")}`;
     if (remainingCount > 0 && !showAllReferences) {
-      return `${referenceText}\n\nSee More ${remainingCount} reference${remainingCount > 1 ? 's' : ''}...`;
+      referenceText += `\n\nClick "See More" below to view ${remainingCount} more reference${remainingCount > 1 ? "s" : ""}.`;
     }
 
     return referenceText;
   };
 
-  // Handle clicking on "See More"
-  const handleSeeMoreClick = () => {
-    setShowAllReferences(true);
+  const formatFollowUp = (followup: string): string => {
+    if (!followup || followup.trim() === "") return "";
+    return `\n\n**Suggested Follow-up Question**\n• ${followup.trim()}`;
   };
 
-  const formatFollowUp = (followup: string): string => {
-    if (!followup || followup.trim() === '') {
-      return '';
-    }
-    return `\n\n**Suggested Follow-up Question**\n• ${followup.trim()}`;
+  const handleSeeMoreClick = () => {
+    setShowAllReferences(true);
   };
 
   const handleSendMessage = async (userInput: string) => {
@@ -144,12 +143,17 @@ export default function ChatLayout() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("https://ai-careerguidance.onrender.com/file/query", {
+      const res = await fetch(`${API_BASE}/file/query`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ question: userInput, conversationId: historyId, isFollowUp: true,id: conversationId }),
+        body: JSON.stringify({
+          question: userInput,
+          conversationId: historyId,
+          isFollowUp: true,
+          id: conversationId,
+        }),
       });
 
       if (!res.ok) {
@@ -157,10 +161,9 @@ export default function ChatLayout() {
       }
 
       const data = await res.json();
-
       const formattedAnswer = formatResponse(data.data.answer ?? "Sorry, I couldn't understand.");
       const formattedReferences = formatReferences(data.data.references ?? []);
-      const formattedFollowUp = formatFollowUp(data.data.follow_up ?? '');
+      const formattedFollowUp = formatFollowUp(data.data.follow_up ?? "");
 
       const finalContent = `Here is the answer based on your query:\n\n${formattedAnswer}\n\n---\n\n${formattedReferences}\n\n---\n\n${formattedFollowUp}`;
 
@@ -185,8 +188,8 @@ export default function ChatLayout() {
       <ChatMessages messages={messages} isLoading={isLoading} />
       <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
 
-      {/* Add button for "See More" */}
-      {showAllReferences && (
+      {/* See More Button */}
+      {!showAllReferences && messages.some((m) => m.content.includes("Click \"See More\"")) && (
         <div className="text-center mt-4">
           <button onClick={handleSeeMoreClick} className="text-blue-500">See More</button>
         </div>

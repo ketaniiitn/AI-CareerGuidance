@@ -40,7 +40,8 @@ export function AppSidebar() {
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState("");
   const [recentChats, setRecentChats] = useState<Chat[]>([]);
-  const { user, isLoaded, isSignedIn } = useUser();
+  const { user } = useUser(); // removed unused isLoaded, isSignedIn
+
   // Fetch chats from API
   useEffect(() => {
     async function fetchChats() {
@@ -50,15 +51,13 @@ export function AppSidebar() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ uid: user?.id  })
-
+          body: JSON.stringify({ uid: user?.id }),
         });
-  
+
         const data = await response.json();
-        console.log("Fetched chats:", data); // Check here
-  
+        console.log("Fetched chats:", data);
+
         if (Array.isArray(data.data)) {
-          // Map only ids into { id, title: "Conversation {id}" }
           const chats = data.data.map((id: number) => ({
             id,
             title: `Conversation ${id}`,
@@ -71,10 +70,11 @@ export function AppSidebar() {
         console.error("Failed to fetch chats:", error);
       }
     }
-    fetchChats();
-  }, []);
-  
-  
+
+    if (user?.id) {
+      fetchChats();
+    }
+  }, [user?.id]); // added missing dependency
 
   const mainNavItems = [
     {
@@ -180,11 +180,10 @@ export function AppSidebar() {
                 recentChats.map((chat) => (
                   <SidebarMenuItem key={chat.id}>
                     <SidebarMenuButton asChild tooltip={chat.title}>
-                    <a href={`/chat/${chat.id}`}>
-  <MessageSquare />
-  <span>{chat.title}</span>
-</a>
-
+                      <a href={`/chat/${chat.id}`}>
+                        <MessageSquare />
+                        <span>{chat.title}</span>
+                      </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))
