@@ -39,7 +39,7 @@ export default function ChatLayout() {
     if (conversationHistoryFetched) return; // Don't fetch again if history is already fetched
 
     try {
-      const res = await fetch("http://localhost:5000/file/conversationHistory", {
+      const res = await fetch("https://ai-careerguidance.onrender.com/file/conversationHistory", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -144,7 +144,7 @@ export default function ChatLayout() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/file/query", {
+      const res = await fetch("https://ai-careerguidance.onrender.com/file/query", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

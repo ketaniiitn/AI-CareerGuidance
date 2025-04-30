@@ -5,7 +5,7 @@ const app = express();
 
 // CORS setup
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: 'https://ai-career-guidance-ten.vercel.app/',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
