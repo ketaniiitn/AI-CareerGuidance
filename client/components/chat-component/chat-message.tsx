@@ -16,7 +16,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
     <div
       className={cn(
         "flex items-start gap-3 max-w-[80%]",
-        message.role === "user" ? "ml-auto justify-end" : "justify-start"
+        message.role === "user" ? "ml-auto justify-end" : "justify-start",
       )}
     >
       {message.role === "assistant" && (
@@ -27,27 +27,17 @@ export function ChatMessage({ message }: ChatMessageProps) {
         </Avatar>
       )}
 
-      <Card
-        className={cn(
-          "p-3 text-sm",
-          message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
-        )}
-      >
+      <Card className={cn("p-3 text-sm", message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted")}>
         {/* Render the content as Markdown */}
         <div
-          className={cn(
-            "markdown-content",
-            message.role === "user" ? "text-primary-foreground" : "text-foreground"
-          )}
+          className={cn("markdown-content", message.role === "user" ? "text-primary-foreground" : "text-foreground")}
         >
-          <ReactMarkdown>
-            {message.content}
-          </ReactMarkdown>
+          <ReactMarkdown>{message.content}</ReactMarkdown>
         </div>
         <div
           className={cn(
             "text-xs mt-1",
-            message.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
+            message.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground",
           )}
         >
           {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}

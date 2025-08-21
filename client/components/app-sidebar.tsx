@@ -1,7 +1,7 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import {
   BookOpen,
   BriefcaseBusiness,
@@ -12,7 +12,7 @@ import {
   PanelLeft,
   Settings,
   User2,
-} from "lucide-react";
+} from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -25,24 +25,24 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-} from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useUser } from "@clerk/nextjs";
+} from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useUser } from "@clerk/nextjs"
 
+// ✅ CHANGED: The Chat interface now expects a string ID
 interface Chat {
-  id: number;
-  title: string;
+  id: string
+  title: string
 }
 
 export function AppSidebar() {
-  const pathname = usePathname();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [recentChats, setRecentChats] = useState<Chat[]>([]);
-  const { user } = useUser(); // removed unused isLoaded, isSignedIn
+  const pathname = usePathname()
+  const [searchQuery, setSearchQuery] = useState("")
+  const [recentChats, setRecentChats] = useState<Chat[]>([])
+  const { user } = useUser()
 
-  // Fetch chats from API
   useEffect(() => {
     async function fetchChats() {
       try {
@@ -51,30 +51,32 @@ export function AppSidebar() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ uid: user?.id }),
-        });
+          body: JSON.stringify({ id: user?.id }),
+        })
 
-        const data = await response.json();
-        console.log("Fetched chats:", data);
+        const data = await response.json()
+        console.log("Fetched chats:", data)
 
-        if (Array.isArray(data.data)) {
-          const chats = data.data.map((id: number) => ({
+        // ✅ CHANGED: Updated logic to handle the "No conversations found" case gracefully
+        if (data.success && Array.isArray(data.data)) {
+          const chats = data.data.map((id: string) => ({
             id,
-            title: `Conversation ${id}`,
-          }));
-          setRecentChats(chats);
+            title: `Chat ${id.substring(5, 12)}...`, // Create a more readable title
+          }))
+          setRecentChats(chats)
         } else {
-          console.error("Unexpected response format:", data);
+          // If the request was not successful or data is not an array, just clear the chats
+          setRecentChats([])
         }
       } catch (error) {
-        console.error("Failed to fetch chats:", error);
+        console.error("Failed to fetch chats:", error)
       }
     }
 
     if (user?.id) {
-      fetchChats();
+      fetchChats()
     }
-  }, [user?.id]); // added missing dependency
+  }, [user?.id])
 
   const mainNavItems = [
     {
@@ -86,8 +88,8 @@ export function AppSidebar() {
     {
       title: "Career Guidance",
       icon: BriefcaseBusiness,
-      href: "/career-guidance",
-      isActive: pathname === "/career-guidance",
+      href: "/career-guidance-home",
+      isActive: pathname.startsWith("/career-guidance"),
     },
     {
       title: "Learning Paths",
@@ -95,7 +97,7 @@ export function AppSidebar() {
       href: "/learning-paths",
       isActive: pathname === "/learning-paths",
     },
-  ];
+  ]
 
   const resourcesItems = [
     {
@@ -110,7 +112,7 @@ export function AppSidebar() {
       href: "/ideas",
       isActive: pathname === "/ideas",
     },
-  ];
+  ]
 
   return (
     <Sidebar variant="sidebar" collapsible="icon">
@@ -214,5 +216,5 @@ export function AppSidebar() {
         </div>
       </SidebarFooter>
     </Sidebar>
-  );
+  )
 }

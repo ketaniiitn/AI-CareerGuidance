@@ -6,26 +6,26 @@ import ChatLayout from "@/components/chat-component/chat-layout"
 import { Navbar } from "@/components/navbar"
 import { Toaster } from "@/components/ui/sonner"
 
-
 export default function CareerGuidanceHome() {
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full bg-background">
-        {/* App Sidebar */}
-        <AppSidebar />
+      <div className="grid h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[220px_1fr]">
+        <div className="hidden border-r bg-muted/40 md:block">
+          <AppSidebar />
+        </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
+        {/* --- Main Content Column --- */}
+        {/* ✅ FIX: Added 'bg-background' here to fill the column and remove the gap */}
+        <div className="flex flex-col bg-background">
           <Navbar>
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-semibold">Career Guidance Assistant</h1>
             </div>
           </Navbar>
 
-          {/* Main Chat Interface */}
-          <div className="flex-1 relative overflow-hidden">
+          <main className="flex-1 overflow-y-auto p-4 lg:p-6">
             <ChatLayout />
-          </div>
+          </main>
         </div>
       </div>
       <Toaster />
