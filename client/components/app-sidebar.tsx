@@ -31,7 +31,6 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useUser } from "@clerk/nextjs"
 
-// ✅ CHANGED: The Chat interface now expects a string ID
 interface Chat {
   id: string
   title: string
@@ -46,7 +45,8 @@ export function AppSidebar() {
   useEffect(() => {
     async function fetchChats() {
       try {
-        const response = await fetch("http://localhost:5000/file/conversationsh", {
+        const API_BASE = process.env.NEXT_PUBLIC_API_URL // ✅ dynamic base URL
+        const response = await fetch(`${API_BASE}/file/conversationsh`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -57,15 +57,13 @@ export function AppSidebar() {
         const data = await response.json()
         console.log("Fetched chats:", data)
 
-        // ✅ CHANGED: Updated logic to handle the "No conversations found" case gracefully
         if (data.success && Array.isArray(data.data)) {
           const chats = data.data.map((id: string) => ({
             id,
-            title: `Chat ${id.substring(5, 12)}...`, // Create a more readable title
+            title: `Chat ${id.substring(5, 12)}...`,
           }))
           setRecentChats(chats)
         } else {
-          // If the request was not successful or data is not an array, just clear the chats
           setRecentChats([])
         }
       } catch (error) {

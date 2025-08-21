@@ -32,7 +32,7 @@ export default function ChatLayout({ conversationIdProp }: ChatLayoutProps) {
   const [historyId, setHistoryId] = useState<string | null>(null)
   const { user, isLoaded } = useUser()
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL
 
   useEffect(() => {
     // Set initial welcome message only for new chats.
