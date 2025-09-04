@@ -4,9 +4,9 @@ import ChatLayout from "@/components/chat-component/chat-layout";
 import { Navbar } from "@/components/navbar";
 import { Toaster } from "@/components/ui/sonner";
 
-// Server Component version: simpler, params is plain object, avoids hydration mismatch + param Promise warning.
-export default function ChatPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+// Updated for Next.js 15: params is now a Promise in type definitions.
+export default async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   return (
     <SidebarProvider>
       <div className="grid h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[220px_1fr]">
