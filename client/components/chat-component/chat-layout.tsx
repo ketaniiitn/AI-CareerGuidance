@@ -52,6 +52,8 @@ export default function ChatLayout({ conversationIdProp }: ChatLayoutProps) {
   const fetchConversationHistory = useCallback(async (convId: string) => {
     if (conversationHistoryFetched || !user?.id) return
     setIsHistoryLoading(true)
+    interface ConversationHistoryRow { id: string | number; question: string; answer: string; followUpQuestion?: string; createdAt: string }
+    interface HistoryResponse { success: boolean; data?: ConversationHistoryRow[]; iddd?: string }
     try {
       const res = await fetch(`${API_BASE}/file/conversationHistory`, {
         method: "POST",
@@ -59,26 +61,14 @@ export default function ChatLayout({ conversationIdProp }: ChatLayoutProps) {
         body: JSON.stringify({ uid: user.id, id: convId }),
       })
       if (!res.ok) throw new Error("Failed to fetch conversation history")
-      const data: { success: boolean; data?: Array<any>; iddd?: string } = await res.json()
+      const data: HistoryResponse = await res.json()
       setHistoryId(data.iddd ?? null)
       if (data.success && Array.isArray(data.data)) {
-        type HistoryRow = { id: string | number; question: string; answer: string; followUpQuestion?: string; createdAt: string }
-        const history = data.data as HistoryRow[]
         const combined: Message[] = []
-        history.forEach((msg) => {
-          combined.push({
-            id: `${msg.id}-user`,
-            content: msg.question,
-            role: "user",
-            timestamp: new Date(msg.createdAt),
-          })
-          combined.push({
-            id: String(msg.id),
-            content: msg.answer + (msg.followUpQuestion || ""),
-            role: "assistant",
-            timestamp: new Date(msg.createdAt),
-          })
-        })
+        for (const msg of data.data) {
+          combined.push({ id: `${msg.id}-user`, content: msg.question, role: "user", timestamp: new Date(msg.createdAt) })
+          combined.push({ id: String(msg.id), content: msg.answer + (msg.followUpQuestion || ""), role: "assistant", timestamp: new Date(msg.createdAt) })
+        }
         setMessages(combined)
       }
       setConversationHistoryFetched(true)
