@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE "Document" ADD COLUMN     "chunkIndex" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "embeddingNorm" DOUBLE PRECISION,
+ADD COLUMN     "keywords" TEXT,
+ADD COLUMN     "sectionTitle" TEXT,
+ADD COLUMN     "sourceFile" TEXT,
+ADD COLUMN     "tokenCount" INTEGER NOT NULL DEFAULT 0;

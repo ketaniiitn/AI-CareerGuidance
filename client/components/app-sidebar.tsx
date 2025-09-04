@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useUser } from "@clerk/nextjs"
 
+// ✅ CHANGED: The Chat interface now expects a string ID
 interface Chat {
   id: string
   title: string
@@ -45,8 +46,7 @@ export function AppSidebar() {
   useEffect(() => {
     async function fetchChats() {
       try {
-        const API_BASE = process.env.NEXT_PUBLIC_API_URL // ✅ dynamic base URL
-        const response = await fetch(`${API_BASE}/file/conversationsh`, {
+        const response = await fetch("http://localhost:5000/file/conversationsh", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -56,7 +56,6 @@ export function AppSidebar() {
 
         const data = await response.json()
         console.log("Fetched chats:", data)
-
         if (data.success && Array.isArray(data.data)) {
           const chats = data.data.map((id: string) => ({
             id,

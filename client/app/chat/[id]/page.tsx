@@ -1,14 +1,12 @@
-"use client";
-
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import ChatLayout from "@/components/chat-component/chat-layout";
 import { Navbar } from "@/components/navbar";
 import { Toaster } from "@/components/ui/sonner";
-import React from "react"; 
 
-export default function ChatPage({ params }: {params: Promise<{ id: string }> }) {
-const { id } = React.use(params);
+// Server Component version: simpler, params is plain object, avoids hydration mismatch + param Promise warning.
+export default function ChatPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   return (
     <SidebarProvider>
       <div className="grid h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[220px_1fr]">
@@ -22,10 +20,10 @@ const { id } = React.use(params);
             </div>
           </Navbar>
           <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-                      <ChatLayout conversationIdProp={id} />
-                    </main>
-            </div>
+            <ChatLayout conversationIdProp={id} />
+          </main>
         </div>
+      </div>
       <Toaster />
     </SidebarProvider>
   );

@@ -14,6 +14,7 @@ model Conversation {
   userId          String             
   createdAt       DateTime           @default(now())
   history         ConversationHistory[]
+  state           ConversationState?
 }
 
 model ConversationHistory {
@@ -32,4 +33,31 @@ model Document {
   id        Int     @id @default(autoincrement())
   content   String  
   embedding Bytes   
+  sourceFile   String?
+  chunkIndex   Int      @default(0)
+  sectionTitle String?
+  tokenCount   Int      @default(0)
+  keywords     String?  // comma-separated top keywords for quick lexical filtering
+  embeddingNorm Float?  // precomputed L2 norm for faster cosine similarity
+  createdAt    DateTime @default(now())
+  // New metadata for taxonomy & structured retrieval
+  stream       String?   // e.g., commerce, law, engineering, hospitality
+  exams        String?   // JSON string array of exam names
+  degrees      String?   // JSON string array of degree names
+  skills       String?   // JSON string array of key skills
+  usageCount   Int       @default(0)
+  avgRank      Float?    // running average of rank when retrieved
+}
+
+model ConversationState {
+  id              String   @id @default(uuid())
+  conversationId  String   @unique
+  targetStream    String?
+  interests       String?  // JSON array
+  rejectedStreams String?  // JSON array
+  userStrengths   String?  // JSON array or object JSON string
+  profileType     String?  // analytical | people | creative | operational
+  sessionSummary  String?  // compressed running summary
+  updatedAt       DateTime @updatedAt
+  conversation    Conversation @relation(fields: [conversationId], references: [id])
 }
