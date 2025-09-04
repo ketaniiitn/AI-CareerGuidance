@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { toast } from "sonner"
 import { ChatMessages } from "./chat-messages"
 import { ChatInput } from "./chat-input"
@@ -49,7 +49,7 @@ export default function ChatLayout({ conversationIdProp }: ChatLayoutProps) {
     }
   }, [conversationIdProp])
 
-  const fetchConversationHistory = async (convId: string) => {
+  const fetchConversationHistory = useCallback(async (convId: string) => {
     if (conversationHistoryFetched || !user?.id) return
     setIsHistoryLoading(true)
     try {
@@ -59,20 +59,21 @@ export default function ChatLayout({ conversationIdProp }: ChatLayoutProps) {
         body: JSON.stringify({ uid: user.id, id: convId }),
       })
       if (!res.ok) throw new Error("Failed to fetch conversation history")
-      const data = await res.json()
-      setHistoryId(data.iddd)
-      if (data.success && data.data) {
-        const history = data.data
+      const data: { success: boolean; data?: Array<any>; iddd?: string } = await res.json()
+      setHistoryId(data.iddd ?? null)
+      if (data.success && Array.isArray(data.data)) {
+        type HistoryRow = { id: string | number; question: string; answer: string; followUpQuestion?: string; createdAt: string }
+        const history = data.data as HistoryRow[]
         const combined: Message[] = []
-        history.forEach((msg: any) => {
+        history.forEach((msg) => {
           combined.push({
-            id: msg.id.toString() + "-user",
+            id: `${msg.id}-user`,
             content: msg.question,
             role: "user",
             timestamp: new Date(msg.createdAt),
           })
           combined.push({
-            id: msg.id.toString(),
+            id: String(msg.id),
             content: msg.answer + (msg.followUpQuestion || ""),
             role: "assistant",
             timestamp: new Date(msg.createdAt),
@@ -87,7 +88,7 @@ export default function ChatLayout({ conversationIdProp }: ChatLayoutProps) {
     } finally {
       setIsHistoryLoading(false)
     }
-  }
+  }, [API_BASE, conversationHistoryFetched, user?.id])
 
   useEffect(() => {
     if (conversationId && !conversationHistoryFetched && isLoaded && user?.id) {
@@ -95,7 +96,7 @@ export default function ChatLayout({ conversationIdProp }: ChatLayoutProps) {
     } else if (!conversationId) {
       setIsHistoryLoading(false)
     }
-  }, [conversationId, conversationHistoryFetched, isLoaded, user?.id])
+  }, [conversationId, conversationHistoryFetched, isLoaded, user?.id, fetchConversationHistory])
 
   const handleSendMessage = async (userInput: string) => {
     if (!userInput.trim()) return

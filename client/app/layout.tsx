@@ -21,11 +21,13 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Snapshot user preference (server side we assume light to keep deterministic HTML)
+  const initialClass = `${inter.variable} antialiased` // don't include dynamic theme class at SSR
   return (
     <ClerkProvider>
-      <html lang="en" className={`${inter.variable} antialiased`}>
+      <html lang="en" className={initialClass} suppressHydrationWarning>
         <body className="font-sans">
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
             {children}
           </ThemeProvider>
         </body>

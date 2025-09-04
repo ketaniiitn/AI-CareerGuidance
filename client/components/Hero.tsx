@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Code, Briefcase, Lightbulb, Linkedin, Github, Twitter } from "lucide-react"
 import { LogIn } from "lucide-react"
+import Image from "next/image"
 
 export function HeroSectionOne() {
   const router = useRouter()
@@ -18,7 +19,7 @@ export function HeroSectionOne() {
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveFeature((prev) => (prev + 1) % features.length)
-    }, 1000)
+    }, 2500)
     return () => clearInterval(interval)
   }, [features.length])
 
@@ -58,8 +59,8 @@ export function HeroSectionOne() {
             </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white leading-tight">
-              Use comparative judgement to discover{" "}
-              <span className="text-purple-600 dark:text-purple-400">what's most important to you</span> in a career 🤔
+              Use comparative judgement to discover {""}
+              <span className="text-purple-600 dark:text-purple-400">what&apos;s most important to you</span> in a career 🤔
             </h1>
 
             <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
@@ -67,6 +68,23 @@ export function HeroSectionOne() {
               to choose careers that align with them. Or if you already know what career you want to pursue, you can
               skip the quiz and jump straight to step 2...
             </p>
+
+            {/* Rotating features indicator */}
+            <div className="flex gap-4 items-center" aria-label="Key platform features">
+              {features.map((f, idx) => (
+                <div
+                  key={f.text}
+                  className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
+                    idx === activeFeature
+                      ? "bg-purple-600 text-white border-purple-600"
+                      : "bg-white/40 dark:bg-white/10 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600"
+                  }`}
+                >
+                  {f.icon}
+                  {f.text}
+                </div>
+              ))}
+            </div>
 
             <motion.div
               initial={{ opacity: 0 }}
@@ -141,8 +159,8 @@ export function HeroSectionOne() {
                   Discover Your Career Priorities
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg">
-                  Use comparative judgement to identify{" "}
-                  <span className="font-semibold text-purple-600 dark:text-purple-400">what's most important</span> for
+                  Use comparative judgement to identify {""}
+                  <span className="font-semibold text-purple-600 dark:text-purple-400">what&apos;s most important</span> for
                   you — salary, growth, creativity, stability, or impact. This sets the foundation for choosing the
                   right path.
                 </p>
@@ -262,12 +280,13 @@ export function HeroSectionOne() {
           className="relative z-10 mt-20 rounded-3xl border border-neutral-200 bg-neutral-100 p-4 shadow-md dark:border-neutral-800 dark:bg-neutral-900 max-w-4xl mx-auto"
         >
           <div className="w-full overflow-hidden rounded-xl border border-gray-300 dark:border-gray-700">
-            <img
+            <Image
               src="/home.png"
               alt="Landing page preview"
               className="h-auto w-full object-contain"
               height={1000}
               width={1000}
+              priority
             />
           </div>
         </motion.div>
