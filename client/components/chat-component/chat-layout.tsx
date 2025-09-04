@@ -29,7 +29,7 @@ export default function ChatLayout({ conversationIdProp }: ChatLayoutProps) {
   const [isHistoryLoading, setIsHistoryLoading] = useState(true)
   const [historyId, setHistoryId] = useState<string | null>(null)
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://ai-careerguidance.onrender.com"
   const initializedRef = useRef(false)
 
   // Stable initial timestamp to avoid SSR/CSR drift

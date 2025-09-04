@@ -46,7 +46,7 @@ export function AppSidebar() {
   useEffect(() => {
     async function fetchChats() {
       try {
-        const response = await fetch("http://localhost:5000/file/conversationsh", {
+        const response = await fetch("https://ai-careerguidance.onrender.com/file/conversationsh", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

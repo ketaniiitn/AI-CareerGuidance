@@ -17,7 +17,7 @@ export function Navbar({ children }: NavbarProps) {
   const router = useRouter()
   const { user, isLoaded } = useUser()
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://ai-careerguidance.onrender.com"
 
   const handleNewChat = () => {
     if (!isLoaded || !user?.id) {
