@@ -547,7 +547,7 @@ const query = async (req, res) => {
       stream: doc.stream || null
     }));
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", temperature: 0.65 });
+    const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash", temperature: 0.65 });
   let answer = "";
   let generationError = null;
   try {
@@ -637,7 +637,7 @@ const query = async (req, res) => {
     // Answer verification second pass
     let verification = { valid: true, issues: ["skipped"], improved: null };
     try {
-      const verifierModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash", temperature: 0 });
+      const verifierModel = genAI.getGenerativeModel({ model: "gemini-3.5-flash", temperature: 0 });
       verification = await verifyAnswer({ model: verifierModel, answer, context, question: questionToProcess });
     } catch (verErr) {
       console.warn("Verification step failed:", verErr.message);
