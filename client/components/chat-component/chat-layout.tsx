@@ -120,7 +120,7 @@ export default function ChatLayout({ conversationIdProp }: ChatLayoutProps) {
       let streamedAnswer = ""
       let donePayload: { conversationId?: string; follow_up?: string; references?: { reference_number: number; source?: string; score?: number }[] } | null = null
 
-      while (true) {
+      outer: while (true) {
         const { done, value } = await reader.read()
         if (done) break
         const chunk = decoder.decode(value, { stream: true })
@@ -133,20 +133,18 @@ export default function ChatLayout({ conversationIdProp }: ChatLayoutProps) {
               setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: streamedAnswer } : m))
             } else if (event.type === "done") {
               donePayload = event
-              if (isNewChat && event.conversationId) {
-                setConversationId(event.conversationId)
-                router.replace(`/chat/${event.conversationId}`)
-              }
+              break outer
             } else if (event.type === "error") {
               throw new Error(event.message)
             }
-          } catch {
-            // skip malformed lines
+          } catch (parseErr) {
+            // Only re-throw non-JSON-parse errors (e.g. the error event throw)
+            if (!(parseErr instanceof SyntaxError)) throw parseErr
           }
         }
       }
 
-      // Append references + follow-up to the final message
+      // Append references + follow-up to the final message, then navigate
       if (donePayload) {
         const formattedReferences = formatReferences(donePayload.references ?? [])
         const formattedFollowUp = formatFollowUp(donePayload.follow_up ?? "")
@@ -155,6 +153,10 @@ export default function ChatLayout({ conversationIdProp }: ChatLayoutProps) {
           ? `Here is the answer based on your query:\n\n${streamedAnswer}\n\n---\n\n${suffix}`
           : streamedAnswer
         setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: finalContent } : m))
+        if (isNewChat && donePayload.conversationId) {
+          setConversationId(donePayload.conversationId)
+          router.replace(`/chat/${donePayload.conversationId}`)
+        }
       }
     } catch (e) {
       console.error(e)
